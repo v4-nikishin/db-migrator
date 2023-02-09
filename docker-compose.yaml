@@ -1,0 +1,18 @@
+version: "3"
+
+networks:
+  db:
+    driver: bridge
+
+services:
+  postgres:
+    image: postgres:latest
+    ports:
+      - "5432:5432"
+    expose:
+      - 5432
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    networks:
+      - db
