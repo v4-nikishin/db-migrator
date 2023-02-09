@@ -10,6 +10,20 @@ import (
 	"github.com/v4-nikishin/db-migrator/internal/logger"
 )
 
+const (
+	queryInitDB = `CREATE TABLE if not exists migrations (
+		id              serial primary key,
+		name            text,
+		date            text,
+		status          text
+	);`
+	queryCreateMigration = "insert into migrations (name, date, status) values ($1, $2, $3)"
+	queryGetMigration    = "select name, date, status from migrations where name = $1"
+	queryUpdateMigration = "update migrations set date=$1, status=$2 where name = $3"
+	queryDeleteMigration = "delete from migrations where name = $1"
+	queryMigrations      = "select name, date, status from migrations"
+)
+
 type Storage struct {
 	ctx  context.Context
 	cfg  config.DBConf
@@ -34,13 +48,7 @@ func (s *Storage) connect(dsn string) (err error) {
 }
 
 func (s *Storage) InitDB() error {
-	query := `CREATE TABLE if not exists migrations (
-		id              serial primary key,
-		name            text,
-		date            text,
-		status          text
-	);	`
-	_, err := s.db.ExecContext(s.ctx, query)
+	_, err := s.db.ExecContext(s.ctx, queryInitDB)
 	if err != nil {
 		return fmt.Errorf("cannot create migrations table %w", err)
 	}
@@ -54,8 +62,7 @@ func (s *Storage) Close() {
 }
 
 func (s *Storage) CreateMigration(m Migration) error {
-	query := "insert into migrations (name, date, status) values ($1, $2, $3)"
-	_, err := s.db.ExecContext(s.ctx, query, m.Name, m.Date, m.Status)
+	_, err := s.db.ExecContext(s.ctx, queryCreateMigration, m.Name, m.Date, m.Status)
 	if err != nil {
 		return fmt.Errorf("cannot add event %w", err)
 	}
@@ -63,21 +70,16 @@ func (s *Storage) CreateMigration(m Migration) error {
 }
 
 func (s *Storage) GetMigration(name string) (Migration, error) {
-	query := "select name, date, status from migrations where name = $1"
-	row := s.db.QueryRowContext(s.ctx, query, name)
-
+	row := s.db.QueryRowContext(s.ctx, queryGetMigration, name)
 	m := Migration{}
-
-	err := row.Scan(&m.Name, &m.Date, &m.Status)
-	if err != nil {
-		return m, fmt.Errorf("failed to get migration %w", err)
+	if err := row.Scan(&m.Name, &m.Date, &m.Status); err != nil {
+		return m, fmt.Errorf("cannot get migration %w", err)
 	}
 	return m, nil
 }
 
 func (s *Storage) UpdateMigration(m Migration) error {
-	query := "update migrations set date=$1, status=$2 where name = $3"
-	_, err := s.db.ExecContext(s.ctx, query, m.Date, m.Status, m.Name)
+	_, err := s.db.ExecContext(s.ctx, queryUpdateMigration, m.Date, m.Status, m.Name)
 	if err != nil {
 		return fmt.Errorf("cannot update migration %w", err)
 	}
@@ -85,8 +87,7 @@ func (s *Storage) UpdateMigration(m Migration) error {
 }
 
 func (s *Storage) DeleteMigration(name string) error {
-	query := "delete from migrations where name = $1"
-	_, err := s.db.ExecContext(s.ctx, query, name)
+	_, err := s.db.ExecContext(s.ctx, queryDeleteMigration, name)
 	if err != nil {
 		return fmt.Errorf("cannot delete migration %w", err)
 	}
@@ -94,8 +95,7 @@ func (s *Storage) DeleteMigration(name string) error {
 }
 
 func (s *Storage) Migrations() ([]Migration, error) {
-	query := "select name, date, status from migrations"
-	rows, err := s.db.QueryContext(s.ctx, query)
+	rows, err := s.db.QueryContext(s.ctx, queryMigrations)
 	if err != nil {
 		return nil, fmt.Errorf("cannot select: %w", err)
 	}
