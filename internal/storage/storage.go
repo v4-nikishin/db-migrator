@@ -28,7 +28,7 @@ type Storage struct {
 	ctx  context.Context
 	cfg  config.DBConf
 	logg *logger.Logger
-	db   *sql.DB
+	DB   *sql.DB
 }
 
 func New(ctx context.Context, cfg config.DBConf, logger *logger.Logger) (*Storage, error) {
@@ -36,19 +36,22 @@ func New(ctx context.Context, cfg config.DBConf, logger *logger.Logger) (*Storag
 	if err := s.connect(s.cfg.DSN); err != nil {
 		return nil, fmt.Errorf("cannot connect to psql: %w", err)
 	}
+	if err := s.InitDB(); err != nil {
+		return nil, fmt.Errorf("cannot initiate database: %w", err)
+	}
 	return s, nil
 }
 
 func (s *Storage) connect(dsn string) (err error) {
-	s.db, err = sql.Open("pgx", dsn)
+	s.DB, err = sql.Open("pgx", dsn)
 	if err != nil {
 		return fmt.Errorf("cannot open pgx driver: %w", err)
 	}
-	return s.db.PingContext(s.ctx)
+	return s.DB.PingContext(s.ctx)
 }
 
 func (s *Storage) InitDB() error {
-	_, err := s.db.ExecContext(s.ctx, queryInitDB)
+	_, err := s.DB.ExecContext(s.ctx, queryInitDB)
 	if err != nil {
 		return fmt.Errorf("cannot create migrations table %w", err)
 	}
@@ -56,13 +59,13 @@ func (s *Storage) InitDB() error {
 }
 
 func (s *Storage) Close() {
-	if err := s.db.Close(); err != nil {
+	if err := s.DB.Close(); err != nil {
 		s.logg.Error(fmt.Sprintf("cannot close psql connection: %v", err))
 	}
 }
 
 func (s *Storage) CreateMigration(m Migration) error {
-	_, err := s.db.ExecContext(s.ctx, queryCreateMigration, m.Name, m.Date, m.Status)
+	_, err := s.DB.ExecContext(s.ctx, queryCreateMigration, m.Name, m.Date, m.Status)
 	if err != nil {
 		return fmt.Errorf("cannot add event %w", err)
 	}
@@ -70,7 +73,7 @@ func (s *Storage) CreateMigration(m Migration) error {
 }
 
 func (s *Storage) GetMigration(name string) (Migration, error) {
-	row := s.db.QueryRowContext(s.ctx, queryGetMigration, name)
+	row := s.DB.QueryRowContext(s.ctx, queryGetMigration, name)
 	m := Migration{}
 	if err := row.Scan(&m.Name, &m.Date, &m.Status); err != nil {
 		return m, fmt.Errorf("cannot get migration %w", err)
@@ -79,7 +82,7 @@ func (s *Storage) GetMigration(name string) (Migration, error) {
 }
 
 func (s *Storage) UpdateMigration(m Migration) error {
-	_, err := s.db.ExecContext(s.ctx, queryUpdateMigration, m.Date, m.Status, m.Name)
+	_, err := s.DB.ExecContext(s.ctx, queryUpdateMigration, m.Date, m.Status, m.Name)
 	if err != nil {
 		return fmt.Errorf("cannot update migration %w", err)
 	}
@@ -87,7 +90,7 @@ func (s *Storage) UpdateMigration(m Migration) error {
 }
 
 func (s *Storage) DeleteMigration(name string) error {
-	_, err := s.db.ExecContext(s.ctx, queryDeleteMigration, name)
+	_, err := s.DB.ExecContext(s.ctx, queryDeleteMigration, name)
 	if err != nil {
 		return fmt.Errorf("cannot delete migration %w", err)
 	}
@@ -95,7 +98,7 @@ func (s *Storage) DeleteMigration(name string) error {
 }
 
 func (s *Storage) Migrations() ([]Migration, error) {
-	rows, err := s.db.QueryContext(s.ctx, queryMigrations)
+	rows, err := s.DB.QueryContext(s.ctx, queryMigrations)
 	if err != nil {
 		return nil, fmt.Errorf("cannot select: %w", err)
 	}
