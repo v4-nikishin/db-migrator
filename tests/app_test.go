@@ -32,13 +32,18 @@ func TestMigrator(t *testing.T) {
 	require.NoError(t, err)
 	defer repo.Close()
 
-	err = repo.InitDB()
-	require.NoError(t, err)
-
 	a := app.New(logg, repo)
 
 	t.Run("check unknown migration type", func(t *testing.T) {
 		err := a.Migration("/tmp/qqq", "qqq")
 		require.Error(t, err)
+	})
+	t.Run("check migration up", func(t *testing.T) {
+		err := a.Migration("../migrations/test_migration.sql", app.MigrationUp)
+		require.NoError(t, err)
+	})
+	t.Run("check migration down", func(t *testing.T) {
+		err := a.Migration("../migrations/test_migration.sql", app.MigrationDown)
+		require.NoError(t, err)
 	})
 }

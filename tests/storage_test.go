@@ -35,9 +35,6 @@ func TestStorage(t *testing.T) {
 	require.NoError(t, err)
 	defer repo.Close()
 
-	err = repo.InitDB()
-	require.NoError(t, err)
-
 	f := "2006-01-02 15:04:05"
 
 	now := time.Now().UTC()
