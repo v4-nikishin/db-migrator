@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"errors"
-	"fmt"
 	"os"
 	"strings"
 
@@ -60,7 +59,7 @@ func (p *Parser) parse(migrationCmd Command) ([]string, error) {
 		if strings.HasPrefix(line, commentPrefix) && !strings.HasPrefix(line, commandPrefix) {
 			continue
 		}
-		p.log.Info(line)
+		p.log.Debug(line)
 		if strings.HasPrefix(line, commandPrefix) {
 			currentCmd, err = parseCommand(line)
 			if err != nil {
@@ -85,7 +84,6 @@ func (p *Parser) parse(migrationCmd Command) ([]string, error) {
 	if err := scanner.Err(); err != nil {
 		return nil, err
 	}
-	fmt.Println(statements)
 	return statements, nil
 }
 

@@ -71,8 +71,7 @@ func (a *App) Migration(filePath string, mt MigrationType) error {
 }
 
 func (a *App) migrationUp(filePath string) error {
-	p := parser.New(a.log, filePath)
-	sts, err := p.UpMigration()
+	sts, err := parser.New(a.log, filePath).UpMigration()
 	if err != nil {
 		return err
 	}
