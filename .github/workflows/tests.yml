@@ -3,7 +3,7 @@ name: Database migrator
 on:
   push:
     branches:
-      - db-migrator*
+      - develop
 
 env:
   GO111MODULE: "on"
